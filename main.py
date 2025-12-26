@@ -2,8 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from api import upload, detect, ocr, nlp
-from db.database import create_tables
+from app.api import upload, detect, ocr, nlp, analyze
+from app.db.database import create_tables
 
 
 @asynccontextmanager
@@ -18,3 +18,4 @@ app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(detect.router, prefix="/api/v1/detect", tags=["Detection"])
 app.include_router(ocr.router, prefix="/api/v1/ocr", tags=["OCR"])
 app.include_router(nlp.router, prefix="/api/v1/nlp", tags=["Hypotheses"])
+app.include_router(analyze.router, prefix="/api/v1/analyze", tags=["Analysis"])
