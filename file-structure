@@ -1,0 +1,48 @@
+forensic_avatar_backend/
+│
+├── app/
+│   ├── main.py                # FastAPI app initialization
+│   ├── config.py              # Configurations (DB, MinIO, AI models, secrets)
+│   ├── api/                   # All API routes
+│   │   ├── __init__.py
+│   │   ├── detect.py          # Object detection endpoints
+│   │   ├── ocr.py             # OCR endpoints
+│   │   ├── nlp.py             # Hypothesis generation endpoints
+│   │   └── upload.py          # Image upload to MinIO
+│   │
+│   ├── core/                  # Core logic / orchestration
+│   │   ├── __init__.py
+│   │   ├── models.py          # Pydantic request/response schemas
+│   │   ├── utils.py           # Helper functions (image preprocessing, bbox utils)
+│   │   └── ai_pipeline.py     # Orchestrates image → detection → OCR → NLP → DB
+│   │
+│   ├── services/              # AI modules and storage services
+│   │   ├── __init__.py
+│   │   ├── object_detection.py # YOLO/DETR wrapper
+│   │   ├── ocr_service.py      # Tesseract/Donut wrapper
+│   │   ├── nlp_service.py      # LLM wrapper
+│   │   └── storage_service.py  # MinIO/S3 wrapper (upload/download)
+│   │
+│   ├── db/                    # Database interactions
+│   │   ├── __init__.py
+│   │   ├── database.py        # DB connection setup (PostgreSQL)
+│   │   ├── models.py          # SQLAlchemy ORM models
+│   │   └── crud.py            # CRUD operations
+│   │
+│   └── schemas/               # Pydantic schemas
+│       ├── __init__.py
+│       ├── detect.py
+│       ├── ocr.py
+│       ├── nlp.py
+│       └── upload.py
+│
+├── tests/                     # Unit / integration tests
+│   ├── test_detect.py
+│   ├── test_ocr.py
+│   ├── test_nlp.py
+│   └── test_upload.py
+│
+├── docker-compose.yml         # Docker Compose for PostgreSQL + MinIO
+├── Dockerfile                 # FastAPI app container
+├── requirements.txt           # Python dependencies
+└── README.md
