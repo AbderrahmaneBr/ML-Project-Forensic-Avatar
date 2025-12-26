@@ -42,6 +42,17 @@ class UploadResponse(BaseModel):
     image: ImageResponse
 
 
+class CaseWithImagesResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    images: list[ImageResponse]
+
+    model_config = {"from_attributes": True}
+
+
 # ============== Detection Schemas ==============
 
 class BoundingBox(BaseModel):

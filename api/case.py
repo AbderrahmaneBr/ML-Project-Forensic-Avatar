@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import Case
-from app.schemas.schemas import CaseCreate, CaseResponse
+from app.schemas.schemas import CaseCreate, CaseResponse, CaseWithImagesResponse
 
 router = APIRouter()
 
@@ -28,8 +28,8 @@ def get_case(case_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Case not found")
     return case
 
-@router.get("/", response_model=list[CaseResponse])
+@router.get("/", response_model=list[CaseWithImagesResponse])
 def get_cases(db: Session = Depends(get_db)):
-    """Get all cases."""
+    """Get all cases with their linked images."""
     return db.query(Case).all()
 
