@@ -1,11 +1,13 @@
 import uuid
+from typing import cast
+from uuid import UUID
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import Image, Case, ImageStatus
-from app.services.storage_service import upload_file
+from app.services.storage_service import upload_file, delete_file
 from app.schemas.schemas import UploadResponse, ImageResponse
 
 router = APIRouter()
@@ -70,3 +72,21 @@ async def upload_image(
         message="Image uploaded successfully",
         image=ImageResponse.model_validate(image)
     )
+
+
+@router.delete("/{image_id}")
+def delete_image(image_id: UUID, db: Session = Depends(get_db)):
+    """Delete an image from the database and storage."""
+    image = db.query(Image).filter(Image.id == image_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Delete from MinIO
+    object_name = cast(str, image.storage_url)
+    delete_file(object_name)
+
+    # Delete from database (cascades to related objects)
+    db.delete(image)
+    db.commit()
+
+    return {"message": "Image deleted successfully"}

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from io import BytesIO
 
 from minio import Minio
@@ -19,8 +20,16 @@ def ensure_bucket_exists():
         client.make_bucket(BUCKET_NAME)
 
 
+def extract_object_name(storage_url: str) -> str:
+    """Extract object name from storage_url (handles both old URLs and new object names)."""
+    prefix = f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/"
+    if storage_url.startswith(prefix):
+        return storage_url[len(prefix):]
+    return storage_url
+
+
 def upload_file(data: bytes, object_name: str, content_type: str) -> str:
-    """Upload file bytes to MinIO and return the URL."""
+    """Upload file bytes to MinIO and return the object name (not URL)."""
     ensure_bucket_exists()
     client.put_object(
         BUCKET_NAME,
@@ -29,4 +38,16 @@ def upload_file(data: bytes, object_name: str, content_type: str) -> str:
         length=len(data),
         content_type=content_type
     )
-    return f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{object_name}"
+    return object_name
+
+
+def get_presigned_url(object_name: str, expires: timedelta = timedelta(hours=1)) -> str:
+    """Generate a presigned URL for accessing an object."""
+    clean_name = extract_object_name(object_name)
+    return client.presigned_get_object(BUCKET_NAME, clean_name, expires=expires)
+
+
+def delete_file(object_name: str) -> None:
+    """Delete a file from MinIO."""
+    clean_name = extract_object_name(object_name)
+    client.remove_object(BUCKET_NAME, clean_name)
