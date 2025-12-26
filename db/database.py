@@ -19,5 +19,5 @@ def get_db():
 
 def create_tables():
     """Create all tables in the database."""
-    from app.db.models import Case, Image, DetectedObject, ExtractedText, Hypothesis
+    from app.db.models import Conversation, Message, Image, DetectedObject, ExtractedText
     Base.metadata.create_all(bind=engine)

@@ -16,8 +16,13 @@ class ImageStatus(PyEnum):
     FAILED = "failed"
 
 
-class Case(Base):
-    __tablename__ = "cases"
+class MessageRole(PyEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
@@ -25,14 +30,27 @@ class Case(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    images = relationship("Image", back_populates="case", cascade="all, delete-orphan")
+    images = relationship("Image", back_populates="conversation", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False)
+    role = Column(Enum(MessageRole), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("Conversation", back_populates="messages")
 
 
 class Image(Base):
     __tablename__ = "images"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False)
     filename = Column(String(255), nullable=False)
     storage_url = Column(String(512), nullable=False)
     content_type = Column(String(100), nullable=True)
@@ -40,10 +58,9 @@ class Image(Base):
     status = Column(Enum(ImageStatus), default=ImageStatus.PENDING)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    case = relationship("Case", back_populates="images")
+    conversation = relationship("Conversation", back_populates="images")
     detected_objects = relationship("DetectedObject", back_populates="image", cascade="all, delete-orphan")
     extracted_texts = relationship("ExtractedText", back_populates="image", cascade="all, delete-orphan")
-    hypotheses = relationship("Hypothesis", back_populates="image", cascade="all, delete-orphan")
 
 
 class DetectedObject(Base):
@@ -74,15 +91,3 @@ class ExtractedText(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     image = relationship("Image", back_populates="extracted_texts")
-
-
-class Hypothesis(Base):
-    __tablename__ = "hypotheses"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    image_id = Column(UUID(as_uuid=True), ForeignKey("images.id"), nullable=False)
-    content = Column(Text, nullable=False)
-    confidence = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    image = relationship("Image", back_populates="hypotheses")

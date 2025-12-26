@@ -12,6 +12,8 @@ Guidelines:
 5. Avoid bullet points, lists, or numbered items
 6. Do not use first person (no "I think", "I see", "I believe")
 7. Focus on the scene and evidence, not the investigator
+8. NEVER use parenthetical stage directions like "(in a deep voice)", "(dramatically)", "(pauses)" - just write the narration directly
+9. Do not include any meta-commentary about how to read or perform the text
 
 IMPORTANT - Adjust your certainty language based on detection confidence levels:
 - HIGH confidence (marked [HIGH]): Use definitive language like "clearly visible", "unmistakably present", "without doubt"

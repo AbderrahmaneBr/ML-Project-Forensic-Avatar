@@ -8,19 +8,19 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db, SessionLocal
-from app.db.models import Image, DetectedObject, ExtractedText, Hypothesis, ImageStatus
+from app.db.models import Conversation, Image, DetectedObject, ExtractedText, Message, MessageRole, ImageStatus
 from app.services.object_detection import detect_objects
 from app.services.ocr_service import extract_text
 from app.services.nlp_service import generate_hypothesis
 from app.services.storage_service import get_presigned_url
-from app.services.job_service import job_store, JobStatus, Job
+from app.services.job_service import job_store, JobStatus
 
 router = APIRouter()
 
 
 # Request/Response schemas
 class JobRequest(BaseModel):
-    image_ids: list[UUID] = Field(..., min_length=1)
+    conversation_id: UUID
     context: str | None = Field(None, description="Additional context about the case")
 
 
@@ -41,25 +41,31 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
-def run_analysis_job(job_id: UUID, image_ids: list[UUID], context: str | None):
+def run_analysis_job(job_id: UUID, conversation_id: UUID, context: str | None):
     """Background task that runs the full analysis pipeline."""
     db = SessionLocal()
 
     try:
         job_store.update_job(job_id, status=JobStatus.RUNNING, current_step="validating")
 
-        # Validate images
-        images: list[Image] = []
-        for img_id in image_ids:
-            image = db.query(Image).filter(Image.id == img_id).first()
-            if not image:
-                job_store.update_job(
-                    job_id,
-                    status=JobStatus.FAILED,
-                    error=f"Image {img_id} not found"
-                )
-                return
-            images.append(image)
+        # Validate conversation and get images
+        conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+        if not conversation:
+            job_store.update_job(
+                job_id,
+                status=JobStatus.FAILED,
+                error=f"Conversation {conversation_id} not found"
+            )
+            return
+
+        images = db.query(Image).filter(Image.conversation_id == conversation_id).all()
+        if not images:
+            job_store.update_job(
+                job_id,
+                status=JobStatus.FAILED,
+                error="No images in conversation"
+            )
+            return
 
         all_objects_data: list[dict] = []
         all_texts_data: list[dict] = []
@@ -115,16 +121,15 @@ def run_analysis_job(job_id: UUID, image_ids: list[UUID], context: str | None):
 
         hypothesis_data = generate_hypothesis(all_objects_data, all_texts_data, context)
 
-        # Save hypothesis
-        first_image_id = cast(UUID, images[0].id)
-        db_hypothesis = Hypothesis(
-            image_id=first_image_id,
-            content=hypothesis_data["content"],
-            confidence=hypothesis_data["confidence"]
+        # Save hypothesis as assistant message
+        assistant_msg = Message(
+            conversation_id=conversation_id,
+            role=MessageRole.ASSISTANT,
+            content=hypothesis_data["content"]
         )
-        db.add(db_hypothesis)
+        db.add(assistant_msg)
         db.commit()
-        db.refresh(db_hypothesis)
+        db.refresh(assistant_msg)
 
         # Mark complete
         job_store.update_job(
@@ -132,7 +137,7 @@ def run_analysis_job(job_id: UUID, image_ids: list[UUID], context: str | None):
             status=JobStatus.COMPLETED,
             current_step="complete",
             result={
-                "hypothesis_id": str(db_hypothesis.id),
+                "message_id": str(assistant_msg.id),
                 "hypothesis": hypothesis_data["content"],
                 "objects_detected": len(all_objects_data),
                 "texts_extracted": len(all_texts_data)
@@ -156,15 +161,19 @@ def create_analysis_job(
     db: Session = Depends(get_db)
 ):
     """
-    Create a background analysis job.
+    Create a background analysis job for a conversation.
 
     Returns immediately with a job_id that can be polled for status.
     """
-    # Validate images exist before starting job
-    for image_id in request.image_ids:
-        image = db.query(Image).filter(Image.id == image_id).first()
-        if not image:
-            raise HTTPException(status_code=404, detail=f"Image {image_id} not found")
+    # Validate conversation exists
+    conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Check for images
+    images = db.query(Image).filter(Image.conversation_id == request.conversation_id).all()
+    if not images:
+        raise HTTPException(status_code=400, detail="No images in conversation")
 
     # Create job
     job = job_store.create_job()
@@ -173,7 +182,7 @@ def create_analysis_job(
     background_tasks.add_task(
         run_analysis_job,
         job.id,
-        request.image_ids,
+        request.conversation_id,
         request.context
     )
 

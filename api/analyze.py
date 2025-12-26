@@ -1,3 +1,4 @@
+"""Analysis API endpoint for running detection and OCR on conversation images."""
 from datetime import datetime
 from typing import cast
 from uuid import UUID
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Image, DetectedObject, ExtractedText, Hypothesis, ImageStatus
+from app.db.models import Conversation, Image, DetectedObject, ExtractedText, Message, MessageRole, ImageStatus
 from app.services.object_detection import detect_objects
 from app.services.ocr_service import extract_text
 from app.services.nlp_service import generate_hypothesis
@@ -17,7 +18,6 @@ from app.schemas.schemas import (
     ImageAnalysisResult,
     DetectedObjectResponse,
     ExtractedTextResponse,
-    HypothesisResponse,
     BoundingBox,
 )
 
@@ -25,22 +25,26 @@ router = APIRouter()
 
 
 @router.post("/", response_model=AnalysisResult)
-def analyze_images(request: AnalyzeRequest, db: Session = Depends(get_db)):
+def analyze_conversation(request: AnalyzeRequest, db: Session = Depends(get_db)):
     """
-    Run full analysis pipeline on multiple images.
+    Run full analysis pipeline on all images in a conversation.
 
     Pipeline steps:
     1. Object Detection (YOLOv8) - for each image
     2. OCR Text Extraction (Tesseract) - for each image
     3. NLP Hypothesis Generation (Ollama) - combined analysis of all evidence
+
+    The hypothesis is saved as an assistant message in the conversation.
     """
-    # Validate all images exist
-    images: list[Image] = []
-    for image_id in request.image_ids:
-        image = db.query(Image).filter(Image.id == image_id).first()
-        if not image:
-            raise HTTPException(status_code=404, detail=f"Image {image_id} not found")
-        images.append(image)
+    # Validate conversation exists
+    conversation = db.query(Conversation).filter(Conversation.id == request.conversation_id).first()
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Get all images in the conversation
+    images = db.query(Image).filter(Image.conversation_id == request.conversation_id).all()
+    if not images:
+        raise HTTPException(status_code=400, detail="No images in conversation")
 
     # Collect all evidence across images
     all_objects_data: list[dict] = []
@@ -89,7 +93,10 @@ def analyze_images(request: AnalyzeRequest, db: Session = Depends(get_db)):
             )
             db.add(db_text)
             db_texts.append(db_text)
-            all_texts_data.append({"text": item["text"]})
+            all_texts_data.append({
+                "text": item["text"],
+                "confidence": item["confidence"]
+            })
 
         # Update status to completed for this image
         image.status = ImageStatus.COMPLETED  # type: ignore[assignment]
@@ -139,28 +146,17 @@ def analyze_images(request: AnalyzeRequest, db: Session = Depends(get_db)):
     # Step 3: NLP Hypothesis Generation (combined analysis)
     generated = generate_hypothesis(all_objects_data, all_texts_data, request.context)
 
-    # Store hypothesis linked to the first image
-    first_image_id = cast(UUID, images[0].id)
-    db_hyp = Hypothesis(
-        image_id=first_image_id,
-        content=generated["content"],
-        confidence=generated["confidence"],
+    # Save hypothesis as assistant message in the conversation
+    assistant_msg = Message(
+        conversation_id=request.conversation_id,
+        role=MessageRole.ASSISTANT,
+        content=generated["content"]
     )
-    db.add(db_hyp)
+    db.add(assistant_msg)
     db.commit()
-    db.refresh(db_hyp)
-
-    response_hypotheses = [
-        HypothesisResponse(
-            id=cast(UUID, db_hyp.id),
-            content=cast(str, db_hyp.content),
-            confidence=cast(float | None, db_hyp.confidence),
-            created_at=cast(datetime, db_hyp.created_at)
-        )
-    ]
 
     return AnalysisResult(
         status="completed",
         images=image_results,
-        hypotheses=response_hypotheses,
+        hypothesis=generated["content"]
     )

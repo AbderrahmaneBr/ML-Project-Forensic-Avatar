@@ -5,14 +5,14 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-# ============== Case Schemas ==============
+# ============== Conversation Schemas ==============
 
-class CaseCreate(BaseModel):
+class ConversationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
 
 
-class CaseResponse(BaseModel):
+class ConversationResponse(BaseModel):
     id: UUID
     name: str
     description: Optional[str]
@@ -22,11 +22,31 @@ class CaseResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ============== Message Schemas ==============
+
+class MessageResponse(BaseModel):
+    id: UUID
+    role: str
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True, "use_enum_values": True}
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1)
+
+
+class ChatResponse(BaseModel):
+    message: MessageResponse
+    conversation_id: UUID
+
+
 # ============== Image Schemas ==============
 
 class ImageResponse(BaseModel):
     id: UUID
-    case_id: UUID
+    conversation_id: UUID
     filename: str
     storage_url: str
     content_type: Optional[str]
@@ -42,13 +62,25 @@ class UploadResponse(BaseModel):
     image: ImageResponse
 
 
-class CaseWithImagesResponse(BaseModel):
+class ConversationWithImagesResponse(BaseModel):
     id: UUID
     name: str
     description: Optional[str]
     created_at: datetime
     updated_at: datetime
     images: list[ImageResponse]
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationDetailResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    images: list[ImageResponse]
+    messages: list[MessageResponse]
 
     model_config = {"from_attributes": True}
 
@@ -103,30 +135,10 @@ class OCRResponse(BaseModel):
     texts: list[ExtractedTextResponse]
 
 
-# ============== NLP/Hypothesis Schemas ==============
-
-class HypothesisResponse(BaseModel):
-    id: UUID
-    content: str
-    confidence: Optional[float]
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class NLPRequest(BaseModel):
-    image_id: UUID
-
-
-class NLPResponse(BaseModel):
-    image_id: UUID
-    hypotheses: list[HypothesisResponse]
-
-
 # ============== Full Analysis Schemas ==============
 
 class AnalyzeRequest(BaseModel):
-    image_ids: list[UUID] = Field(..., min_length=1)
+    conversation_id: UUID
     context: Optional[str] = Field(None, description="Additional context or description about the case")
 
 
@@ -139,7 +151,7 @@ class ImageAnalysisResult(BaseModel):
 class AnalysisResult(BaseModel):
     status: str
     images: list[ImageAnalysisResult]
-    hypotheses: list[HypothesisResponse]
+    hypothesis: str
 
 
 # ============== Error Schemas ==============
