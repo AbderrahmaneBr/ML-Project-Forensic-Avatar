@@ -1,7 +1,18 @@
-from fastapi import FastAPI
-from api import upload, detect, ocr, nlp
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="AI Forensic Avatar")
+from fastapi import FastAPI
+
+from api import upload, detect, ocr, nlp
+from db.database import create_tables
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_tables()
+    yield
+
+
+app = FastAPI(title="AI Forensic Avatar", lifespan=lifespan)
 
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(detect.router, prefix="/api/v1/detect", tags=["Detection"])

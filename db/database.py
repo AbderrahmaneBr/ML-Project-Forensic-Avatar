@@ -6,3 +6,18 @@ DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+def get_db():
+    """Dependency for FastAPI to get a database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def create_tables():
+    """Create all tables in the database."""
+    from app.db.models import Case, Image, DetectedObject, ExtractedText, Hypothesis
+    Base.metadata.create_all(bind=engine)
