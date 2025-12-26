@@ -52,9 +52,9 @@ def ocr_endpoint(req: OCRRequest, db: Session = Depends(get_db)):
         ExtractedTextResponse(
             id=cast(UUID, t.id),
             text=cast(str, t.text),
-            confidence=cast(float, t.confidence) if t.confidence else None,
-            position_x=cast(float, t.position_x) if t.position_x else None,
-            position_y=cast(float, t.position_y) if t.position_y else None,
+            confidence=cast(float | None, t.confidence),
+            position_x=cast(float | None, t.position_x),
+            position_y=cast(float | None, t.position_y),
             created_at=cast(datetime, t.created_at)
         )
         for t in db_texts
