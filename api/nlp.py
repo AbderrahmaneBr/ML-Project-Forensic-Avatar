@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import Image, DetectedObject, ExtractedText, Hypothesis, ImageStatus
-from app.services.nlp_service import generate_hypotheses
+from app.services.nlp_service import generate_hypothesis
 from app.schemas.schemas import NLPRequest, NLPResponse, HypothesisResponse
 
 router = APIRouter()
@@ -43,37 +43,30 @@ def nlp_endpoint(req: NLPRequest, db: Session = Depends(get_db)):
         for text in extracted_texts
     ]
 
-    # Generate hypotheses
-    generated = generate_hypotheses(objects_data, texts_data)
+    # Generate hypothesis
+    generated = generate_hypothesis(objects_data, texts_data)
 
-    # Save results to database
-    db_hypotheses: list[Hypothesis] = []
-    for hyp in generated:
-        db_hyp = Hypothesis(
-            image_id=image_id,
-            content=hyp["content"],
-            confidence=hyp["confidence"],
-        )
-        db.add(db_hyp)
-        db_hypotheses.append(db_hyp)
+    # Save result to database
+    db_hyp = Hypothesis(
+        image_id=image_id,
+        content=generated["content"],
+        confidence=generated["confidence"],
+    )
+    db.add(db_hyp)
 
     # Update image status to completed
     image.status = ImageStatus.COMPLETED  # type: ignore[assignment]
     db.commit()
-
-    # Refresh to get IDs
-    for db_hyp in db_hypotheses:
-        db.refresh(db_hyp)
+    db.refresh(db_hyp)
 
     # Build response
     response_hypotheses = [
         HypothesisResponse(
-            id=cast(UUID, h.id),
-            content=cast(str, h.content),
-            confidence=cast(float | None, h.confidence),
-            created_at=cast(datetime, h.created_at)
+            id=cast(UUID, db_hyp.id),
+            content=cast(str, db_hyp.content),
+            confidence=cast(float | None, db_hyp.confidence),
+            created_at=cast(datetime, db_hyp.created_at)
         )
-        for h in db_hypotheses
     ]
 
     return NLPResponse(image_id=image_id, hypotheses=response_hypotheses)

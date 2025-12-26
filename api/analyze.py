@@ -9,7 +9,7 @@ from app.db.database import get_db
 from app.db.models import Image, DetectedObject, ExtractedText, Hypothesis, ImageStatus
 from app.services.object_detection import detect_objects
 from app.services.ocr_service import extract_text
-from app.services.nlp_service import generate_hypotheses
+from app.services.nlp_service import generate_hypothesis
 from app.services.storage_service import get_presigned_url
 from app.schemas.schemas import (
     AnalyzeRequest,
@@ -137,33 +137,26 @@ def analyze_images(request: AnalyzeRequest, db: Session = Depends(get_db)):
         ))
 
     # Step 3: NLP Hypothesis Generation (combined analysis)
-    generated = generate_hypotheses(all_objects_data, all_texts_data, request.context)
+    generated = generate_hypothesis(all_objects_data, all_texts_data, request.context)
 
-    # Store hypotheses linked to the first image (or could create a separate analysis record)
+    # Store hypothesis linked to the first image
     first_image_id = cast(UUID, images[0].id)
-    db_hypotheses: list[Hypothesis] = []
-    for hyp in generated:
-        db_hyp = Hypothesis(
-            image_id=first_image_id,
-            content=hyp["content"],
-            confidence=hyp["confidence"],
-        )
-        db.add(db_hyp)
-        db_hypotheses.append(db_hyp)
-
+    db_hyp = Hypothesis(
+        image_id=first_image_id,
+        content=generated["content"],
+        confidence=generated["confidence"],
+    )
+    db.add(db_hyp)
     db.commit()
-
-    for db_hyp in db_hypotheses:
-        db.refresh(db_hyp)
+    db.refresh(db_hyp)
 
     response_hypotheses = [
         HypothesisResponse(
-            id=cast(UUID, h.id),
-            content=cast(str, h.content),
-            confidence=cast(float | None, h.confidence),
-            created_at=cast(datetime, h.created_at)
+            id=cast(UUID, db_hyp.id),
+            content=cast(str, db_hyp.content),
+            confidence=cast(float | None, db_hyp.confidence),
+            created_at=cast(datetime, db_hyp.created_at)
         )
-        for h in db_hypotheses
     ]
 
     return AnalysisResult(
