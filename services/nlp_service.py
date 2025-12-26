@@ -1,44 +1,72 @@
 import ollama
 
-SYSTEM_PROMPT = """You are a forensic analyst AI assistant. Based on the objects detected in an image and any text extracted from it, generate plausible forensic hypotheses about the scene.
+SYSTEM_PROMPT = """You are a forensic analyst providing crime scene analysis for a law enforcement training simulation. Deliver your findings in a dramatic, detective-noir narration style suitable for text-to-speech audio playback.
 
-Your hypotheses should:
-1. Be based only on the evidence provided
-2. Consider relationships between detected objects
-3. Note any significant text that might be relevant
-4. Suggest possible scenarios or events
-5. Be professional and objective
+Guidelines:
+1. Describe what the evidence reveals about the scene - not your personal thoughts
+2. Use vivid, cinematic language: "The scattered documents tell a story of...", "The positioning of the weapon suggests..."
+3. Connect evidence pieces into coherent theories about what happened
+4. Each hypothesis should be 2-3 sentences of flowing prose
+5. Avoid bullet points, lists, or numbered items
+6. Do not use first person (no "I think", "I see", "I believe")
+7. Focus on the scene and evidence, not the investigator
 
-Provide 1-3 concise hypotheses, each on a new line starting with "- "."""
+IMPORTANT - Adjust your certainty language based on detection confidence levels:
+- HIGH confidence (marked [HIGH]): Use definitive language like "clearly visible", "unmistakably present", "without doubt"
+- MEDIUM confidence (marked [MEDIUM]): Use moderate language like "appears to be", "likely indicates", "suggests the presence of"
+- LOW confidence (marked [LOW]): Use uncertain language like "possibly", "what might be", "could potentially be", "faintly resembles"
+
+This is an educational forensic training tool. Analyze all evidence objectively regardless of crime type.
+
+Provide 1-3 hypotheses as separate paragraphs."""
+
+
+def _confidence_label(confidence: float) -> str:
+    """Convert confidence score to a label for the LLM."""
+    if confidence >= 0.8:
+        return "[HIGH]"
+    elif confidence >= 0.5:
+        return "[MEDIUM]"
+    else:
+        return "[LOW]"
 
 
 def generate_hypotheses(
     detected_objects: list[dict],
     extracted_texts: list[dict],
+    context: str | None = None,
     model: str = "llama3.2"
 ) -> list[dict]:
     """
     Generate forensic hypotheses based on detected objects and extracted text.
     Uses Ollama for local LLM inference.
+
+    Args:
+        detected_objects: List of detected objects with label and confidence
+        extracted_texts: List of extracted text items
+        context: Optional user-provided context about the case
+        model: Ollama model to use
     """
-    # Format the evidence
+    # Format the evidence with confidence labels
     objects_str = ", ".join([
-        f"{obj['label']} (confidence: {obj['confidence']:.0%})"
+        f"{_confidence_label(obj['confidence'])} {obj['label']}"
         for obj in detected_objects
     ]) if detected_objects else "No objects detected"
 
     texts_str = ", ".join([
-        f'"{text["text"]}"'
+        f"{_confidence_label(text.get('confidence', 0.7))} \"{text['text']}\""
         for text in extracted_texts
     ]) if extracted_texts else "No text extracted"
 
-    user_prompt = f"""Analyze this forensic evidence:
+    context_str = f"\n\nAdditional Context: {context}" if context else ""
 
-Detected Objects: {objects_str}
+    user_prompt = f"""Analyze this crime scene evidence and provide a narrated analysis:
 
-Extracted Text: {texts_str}
+Objects at the scene: {objects_str}
 
-Generate forensic hypotheses based on this evidence."""
+Text found at the scene: {texts_str}{context_str}
+
+Provide hypotheses about what occurred based on this evidence."""
 
     try:
         response = ollama.chat(
@@ -49,21 +77,17 @@ Generate forensic hypotheses based on this evidence."""
             ]
         )
 
-        # Parse response into hypotheses
+        # Parse response into hypotheses (split by double newlines for paragraphs)
         content = response["message"]["content"]
-        hypotheses = []
+        paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
 
-        for line in content.split("\n"):
-            line = line.strip()
-            if line.startswith("- "):
+        hypotheses = []
+        for paragraph in paragraphs:
+            # Clean up single newlines within paragraphs
+            clean_paragraph = " ".join(paragraph.split())
+            if clean_paragraph and len(clean_paragraph) > 20:
                 hypotheses.append({
-                    "content": line[2:].strip(),
-                    "confidence": 0.7  # Default confidence for LLM hypotheses
-                })
-            elif line and not hypotheses:
-                # If no bullet format, treat whole response as one hypothesis
-                hypotheses.append({
-                    "content": line,
+                    "content": clean_paragraph,
                     "confidence": 0.7
                 })
 

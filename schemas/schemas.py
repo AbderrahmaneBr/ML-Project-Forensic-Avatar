@@ -126,14 +126,19 @@ class NLPResponse(BaseModel):
 # ============== Full Analysis Schemas ==============
 
 class AnalyzeRequest(BaseModel):
+    image_ids: list[UUID] = Field(..., min_length=1)
+    context: Optional[str] = Field(None, description="Additional context or description about the case")
+
+
+class ImageAnalysisResult(BaseModel):
     image_id: UUID
+    detected_objects: list[DetectedObjectResponse]
+    extracted_texts: list[ExtractedTextResponse]
 
 
 class AnalysisResult(BaseModel):
-    image_id: UUID
     status: str
-    detected_objects: list[DetectedObjectResponse]
-    extracted_texts: list[ExtractedTextResponse]
+    images: list[ImageAnalysisResult]
     hypotheses: list[HypothesisResponse]
 
 
