@@ -5,11 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.db.models import Image, ExtractedText
-from app.services.ocr_service import extract_text
-from app.services.storage_service import get_presigned_url
-from app.schemas.schemas import OCRRequest, OCRResponse, ExtractedTextResponse
+from backend.db.database import get_db
+from backend.db.models import Image, ExtractedText
+from backend.services.ocr_service import extract_text
+from backend.services.storage_service import get_presigned_url
+from backend.schemas.schemas import OCRRequest, OCRResponse, ExtractedTextResponse
 
 router = APIRouter()
 

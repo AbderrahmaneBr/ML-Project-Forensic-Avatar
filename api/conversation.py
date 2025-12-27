@@ -5,9 +5,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.db.models import Conversation, Image, Message, MessageRole
-from app.schemas.schemas import (
+from backend.db.database import get_db
+from backend.db.models import Conversation, Image, Message, MessageRole
+from backend.schemas.schemas import (
     ConversationCreate,
     ConversationResponse,
     ConversationWithImagesResponse,

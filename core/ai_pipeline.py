@@ -1,7 +1,7 @@
-# from app.services.object_detection import detect_objects
-# from app.services.ocr_service import extract_text
-# from app.services.nlp_service import generate_hypotheses
-# from app.db.crud import save_detection, save_ocr, save_hypotheses
+# from backend.services.object_detection import detect_objects
+# from backend.services.ocr_service import extract_text
+# from backend.services.nlp_service import generate_hypotheses
+# from backend.db.crud import save_detection, save_ocr, save_hypotheses
 
 # def analyze_image(image_path: str, case_id: int):
 #     objects = detect_objects(image_path)

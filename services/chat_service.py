@@ -6,7 +6,7 @@ from uuid import UUID
 import ollama
 from sqlalchemy.orm import Session
 
-from app.db.models import Conversation, Message, MessageRole, Image, DetectedObject, ExtractedText
+from backend.db.models import Conversation, Message, MessageRole, Image, DetectedObject, ExtractedText
 
 
 SYSTEM_PROMPT = """You are a forensic analyst providing crime scene analysis for a law enforcement training simulation. Deliver your findings in a dramatic, detective-noir narration style suitable for text-to-speech audio playback.

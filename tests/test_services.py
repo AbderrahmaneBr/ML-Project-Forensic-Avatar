@@ -1,8 +1,7 @@
 """Tests for service layer functions."""
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from app.services.nlp_service import generate_hypotheses, _confidence_label
+from backend.services.nlp_service import generate_hypothesis, _confidence_label
 
 
 class TestConfidenceLabel:
@@ -22,35 +21,35 @@ class TestConfidenceLabel:
         assert _confidence_label(0.0) == "[LOW]"
 
 
-class TestGenerateHypotheses:
+class TestGenerateHypothesis:
     """Tests for hypothesis generation."""
 
     @patch("app.services.nlp_service.ollama")
-    def test_generate_hypotheses_success(self, mock_ollama):
+    def test_generate_hypothesis_success(self, mock_ollama):
         """Test successful hypothesis generation."""
         mock_ollama.chat.return_value = {
             "message": {
-                "content": "The evidence suggests a break-in occurred.\n\nThe victim likely knew the attacker."
+                "content": "The evidence suggests a break-in occurred. The victim likely knew the attacker."
             }
         }
 
-        result = generate_hypotheses(
+        result = generate_hypothesis(
             detected_objects=[{"label": "knife", "confidence": 0.9}],
             extracted_texts=[{"text": "HELP", "confidence": 0.8}]
         )
 
-        assert len(result) == 2
-        assert result[0]["confidence"] == 0.7
-        assert "break-in" in result[0]["content"]
+        assert "content" in result
+        assert result["confidence"] == 0.7
+        assert "break-in" in result["content"]
 
     @patch("app.services.nlp_service.ollama")
-    def test_generate_hypotheses_with_context(self, mock_ollama):
+    def test_generate_hypothesis_with_context(self, mock_ollama):
         """Test hypothesis generation with additional context."""
         mock_ollama.chat.return_value = {
             "message": {"content": "Based on the context provided, this appears deliberate."}
         }
 
-        result = generate_hypotheses(
+        result = generate_hypothesis(
             detected_objects=[],
             extracted_texts=[],
             context="Scene found in residential area"
@@ -62,18 +61,17 @@ class TestGenerateHypotheses:
         assert "residential area" in user_message
 
     @patch("app.services.nlp_service.ollama")
-    def test_generate_hypotheses_ollama_error(self, mock_ollama):
+    def test_generate_hypothesis_ollama_error(self, mock_ollama):
         """Test fallback when Ollama is unavailable."""
         mock_ollama.chat.side_effect = Exception("Connection refused")
 
-        result = generate_hypotheses(
+        result = generate_hypothesis(
             detected_objects=[{"label": "person", "confidence": 0.7}],
             extracted_texts=[]
         )
 
-        assert len(result) == 1
-        assert result[0]["confidence"] == 0.0
-        assert "Unable to generate hypothesis" in result[0]["content"]
+        assert result["confidence"] == 0.0
+        assert "Unable to generate hypothesis" in result["content"]
 
     @patch("app.services.nlp_service.ollama")
     def test_confidence_labels_in_prompt(self, mock_ollama):
@@ -82,11 +80,11 @@ class TestGenerateHypotheses:
             "message": {"content": "Analysis complete."}
         }
 
-        generate_hypotheses(
+        generate_hypothesis(
             detected_objects=[
                 {"label": "knife", "confidence": 0.95},  # HIGH
                 {"label": "blood", "confidence": 0.60},  # MEDIUM
-                {"label": "figure", "confidence": 0.30}, # LOW
+                {"label": "figure", "confidence": 0.30},  # LOW
             ],
             extracted_texts=[]
         )
@@ -104,7 +102,7 @@ class TestGenerateHypotheses:
             "message": {"content": "Insufficient evidence for analysis."}
         }
 
-        result = generate_hypotheses(
+        generate_hypothesis(
             detected_objects=[],
             extracted_texts=[]
         )

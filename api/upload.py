@@ -5,10 +5,10 @@ from uuid import UUID
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.db.models import Image, Conversation, ImageStatus
-from app.services.storage_service import upload_file, delete_file
-from app.schemas.schemas import UploadResponse, ImageResponse
+from backend.db.database import get_db
+from backend.db.models import Image, Conversation, ImageStatus
+from backend.services.storage_service import upload_file, delete_file
+from backend.schemas.schemas import UploadResponse, ImageResponse
 
 router = APIRouter()
 

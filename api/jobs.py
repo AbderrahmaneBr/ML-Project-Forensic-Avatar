@@ -7,13 +7,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db, SessionLocal
-from app.db.models import Conversation, Image, DetectedObject, ExtractedText, Message, MessageRole, ImageStatus
-from app.services.object_detection import detect_objects
-from app.services.ocr_service import extract_text
-from app.services.nlp_service import generate_hypothesis
-from app.services.storage_service import get_presigned_url
-from app.services.job_service import job_store, JobStatus
+from backend.db.database import get_db, SessionLocal
+from backend.db.models import Conversation, Image, DetectedObject, ExtractedText, Message, MessageRole, ImageStatus
+from backend.services.object_detection import detect_objects
+from backend.services.ocr_service import extract_text
+from backend.services.nlp_service import generate_hypothesis
+from backend.services.storage_service import get_presigned_url
+from backend.services.job_service import job_store, JobStatus
 
 router = APIRouter()
 

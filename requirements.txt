@@ -1,0 +1,22 @@
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+pydantic
+boto3   # for MinIO
+minio
+opencv-python
+pillow
+torch
+ultralytics  # YOLOv8
+pytesseract  # OCR wrapper for Tesseract
+python-multipart
+ollama  # Local LLM inference
+
+# Streaming
+sse-starlette  # Server-Sent Events for FastAPI
+
+# Testing
+pytest
+pytest-asyncio
+httpx  # For FastAPI TestClient

@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
-from app.db.database import get_db
-from app.db.models import Conversation, Message, MessageRole
-from app.services.chat_service import chat, chat_stream
-from app.schemas.schemas import ChatRequest, ChatResponse, MessageResponse
+from backend.db.database import get_db
+from backend.db.models import Conversation, Message, MessageRole
+from backend.services.chat_service import chat, chat_stream
+from backend.schemas.schemas import ChatRequest, ChatResponse, MessageResponse
 
 router = APIRouter()
 executor = ThreadPoolExecutor(max_workers=4)

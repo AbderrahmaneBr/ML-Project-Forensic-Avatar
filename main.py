@@ -2,8 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import conversation, upload, detect, ocr, analyze, chat, jobs
-from app.db.database import create_tables
+from backend.api import conversation, upload, detect, ocr, analyze, chat, jobs
+from backend.db.database import create_tables
 
 
 @asynccontextmanager

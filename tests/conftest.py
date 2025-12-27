@@ -4,8 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db.database import Base, get_db
-from app.main import app
+from backend.db.database import Base, get_db
+from backend.main import app
 
 
 # Use in-memory SQLite for testing
@@ -47,10 +47,10 @@ def client(db_session):
 
 
 @pytest.fixture
-def sample_case(client):
-    """Create a sample case for testing."""
+def sample_conversation(client):
+    """Create a sample conversation for testing."""
     response = client.post(
-        "/api/v1/cases/",
-        json={"name": "Test Case", "description": "A test forensic case"}
+        "/api/v1/conversations/",
+        json={"name": "Test Conversation", "description": "A test forensic conversation"}
     )
     return response.json()
